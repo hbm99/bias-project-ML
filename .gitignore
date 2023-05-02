@@ -134,3 +134,6 @@ karlos/modelo_roto/test_data.tfrecord
 karlos/modelo_roto/train_data.tfrecord
 karlos/modelo_roto/valid_data.tfrecord
 karlos/modelo_roto/xception_weights_tf_dim_ordering_tf_kernels_notop.h5
+
+#Images
+*.jpg
