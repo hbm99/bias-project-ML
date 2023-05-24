@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
 
-def dataset_to_df(ds_path, k = 5):
+def data_selection(ds_path: str = 'datasets/utkface', k: int = 5):
     # Loading filenames
     for dirname, _, filenames in os.walk(ds_path):
         pass
@@ -42,9 +42,9 @@ def dataset_to_df(ds_path, k = 5):
     for i,(train_index, test_index) in enumerate(skf.split(X, y)):
         x_train_fold, x_test_fold = X[train_index], X[test_index]
         y_train_fold, y_test_fold = y[train_index], y[test_index]
-        print(f"Fold {i}:")
-        print(f"  Train: index={train_index}")
-        print(f"  Test:  index={test_index}")
+        # print(f"Fold {i}:")
+        # print(f"  Train: index={train_index}")
+        # print(f"  Test:  index={test_index}")
         if(i==r):
             train_idx=train_index
             test_idx=test_index
