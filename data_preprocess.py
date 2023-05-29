@@ -8,7 +8,7 @@ RACE_MAPPER = {0:'white', 1:'black',2: 'asian',3: 'indian', 4:'other'}
 GENDER_MAPPER = {0:'male',1:'female'}
 
 
-def data_selection(ds_path: str = 'data/utkface', k: int = 5):
+def data_selection(ds_path: str = 'data/utkface/', k: int = 5):
     
     df = load_dataset(ds_path)
     
@@ -34,7 +34,7 @@ def data_selection(ds_path: str = 'data/utkface', k: int = 5):
 
     return train_data, test_data
 
-def load_dataset(ds_path: str = 'data/utkface'):
+def load_dataset(ds_path: str = 'data/utkface/'):
     # Loading filenames
     filenames = os.listdir(ds_path)
     
