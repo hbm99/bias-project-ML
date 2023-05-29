@@ -4,6 +4,7 @@ import sys
 from typing import List
 
 import torch
+import tqdm
 from sklearn.decomposition import PCA
 
 sys.path.append('/Users/hanselblanco/Documents/4to/ML/project/bias-project-ML')
@@ -15,8 +16,10 @@ from PIL import Image
 from data.md_gender.md_gender import get_md_gender
 from data_preprocess import data_selection
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 R_COUNT = 100
-CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", "cuda" if torch.cuda.is_available() else "cpu")
+CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
+BATCH_SIZE = 64
 
 def get_data_to_encode():
     # Load dataframes
@@ -35,10 +38,10 @@ def get_data_to_encode():
 
 def encode(pic_dataframes: List[pd.Dataframe], text_dataframes: List[pd.Dataframe]):
     for df in pic_dataframes:
-        df['image_tensor'] = df.filepath.apply(lambda x: torch.tensor(np.stack([CLIP_PREPROCESS(Image.open(x))])))
+        df['image_tensor'] = df.filepath.apply(lambda x: torch.tensor(np.stack([CLIP_PREPROCESS(Image.open(x))])).to(DEVICE))
         df['image_encoded'] = df.image_tensor.apply(lambda x: CLIP_MODEL.encode_image(x))
     for df in text_dataframes:
-        df['text_tensor'] = df.caption.apply(lambda x: clip.tokenize(x).to(device = 'cpu'))
+        df['text_tensor'] = df.caption.apply(lambda x: clip.tokenize(x).to(DEVICE))
         df['text_encoded'] = df.text_tensor.apply(lambda x: CLIP_MODEL.encode_text(x))
     return pic_dataframes, text_dataframes
 
@@ -55,6 +58,66 @@ def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int = 5):
     pca.fit(R)
     
     return pca.components_
+
+def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str]], df: pd.DataFrame) -> pd.DataFrame:
+    texts = [clip.tokenize(tkns[i]).to(DEVICE) for i in range(len(tkns))]
+    photos = [Image.open(photo_path) for photo_path in df['filepath']]
+    
+    results = [] * len(texts)
+    pending_photos = len(photos)
+    for i in tqdm(range(0, len(photos), min(BATCH_SIZE, pending_photos))):
+        pending_photos = len(photos) - i
+        images = [CLIP_PREPROCESS(photos[photo_idx]) for photo_idx in range(i, min(i + BATCH_SIZE, len(photos)))]
+        image_input = torch.tensor(np.stack(images)).to(DEVICE)
+        with torch.no_grad():
+            logits_per_image_list = [CLIP_MODEL(image_input, text)[0] for text in texts]
+             
+            probs_list = [logits_per_image_list[j].softmax(dim=-1).cpu().numpy() for j in range(len(logits_per_image_list))]
+            
+            for j in range(len(probs_list)):
+                results[j].append(probs_list[j])
+                
+    concat_results = [np.concatenate(results[k], axis = 0) for k in range(len(results))]
+    predictions = [np.argmax(concat_results[k], axis = 0) for k in range(len(concat_results))]
+    
+    for i in range(len(labels)):
+        get_label = lambda x: labels[i][x]
+        vect_get_label = np.vectorize(get_label)
+        df['predicted_' + attributes[i]] = vect_get_label(predictions[i])
+    
+    return df
+
+""" 
+def run_clip_debiased(attributes: List[str], labels: List[List[str]], tkns: List[List[str]], df: pd.DataFrame) -> pd.DataFrame:
+    texts = [clip.tokenize(tkns[i]).to(DEVICE) for i in range(len(tkns))]
+    photos = [Image.open(photo_path) for photo_path in df['filepath']]
+    
+    results = [] * len(texts)
+    pending_photos = len(photos)
+    for i in tqdm(range(0, len(photos), min(BATCH_SIZE, pending_photos))):
+        pending_photos = len(photos) - i
+        images = [CLIP_PREPROCESS(photos[photo_idx]) for photo_idx in range(i, min(i + BATCH_SIZE, len(photos)))]
+        image_input = torch.tensor(np.stack(images)).to(DEVICE)
+        with torch.no_grad():
+            image_features = CLIP_MODEL.encode_image(image_input)
+            logits_per_image_list = [CLIP_MODEL(image_input, text)[0] for text in texts]
+             
+            probs_list = [logits_per_image_list[j].softmax(dim=-1).cpu().numpy() for j in range(len(logits_per_image_list))]
+            
+            for j in range(len(probs_list)):
+                results[j].append(probs_list[j])
+                
+    concat_results = [np.concatenate(results[k], axis = 0) for k in range(len(results))]
+    predictions = [np.argmax(concat_results[k], axis = 0) for k in range(len(concat_results))]
+    
+    for i in range(len(labels)):
+        get_label = lambda x: labels[i][x]
+        vect_get_label = np.vectorize(get_label)
+        df['predicted_' + attributes[i]] = vect_get_label(predictions[i])
+    
+    return df """
+            
+    
     
 
 if __name__ == '__main__':
