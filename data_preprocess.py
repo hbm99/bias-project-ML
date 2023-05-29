@@ -29,10 +29,11 @@ def data_selection(ds_path: str = 'data/utkface/', k: int = 5):
             test_idx=test_index
             break
 
-    train_data = df.iloc[train_idx]
-    test_data = df.iloc[test_idx]
+    train_data = df.iloc[train_idx].reset_index(drop=True)
+    test_data = df.iloc[test_idx].reset_index(drop=True)
 
     return train_data, test_data
+
 
 def load_dataset(ds_path: str = 'data/utkface/'):
     # Loading filenames
