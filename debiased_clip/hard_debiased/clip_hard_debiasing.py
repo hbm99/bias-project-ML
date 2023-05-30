@@ -7,6 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
 
 sys.path.append('/Users/hanselblanco/Documents/4to/ML/project/bias-project-ML')
 import clip
@@ -44,7 +45,7 @@ def encode(pic_dataframes: List[pd.Dataframe], text_dataframes: List[pd.Datafram
         df['text_encoded'] = df.text_tensor.apply(lambda x: CLIP_MODEL.encode_text(x))
     return pic_dataframes, text_dataframes
 
-def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int = 165):
+def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 165):
     mean_male = R_male.sum() / R_COUNT
     mean_female = R_female.sum() / R_COUNT
     
@@ -53,9 +54,10 @@ def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int = 165):
     
     R = pd.concat([R_male, R_female])
     
-    pca = PCA(n_components=k)
+    pca = PCA(n_components=0.95)  #n_componets= 0.95 means that the PCA will return the number of components that explain 95% of the variance
     R = R.apply(lambda x: x.detach().numpy()[0]).tolist()
-    pca.fit(R)
+    R_std= StandardScaler().fit_transform(R)  #Standarizing data before applying PCA
+    pca.fit(R_std)
     
     # plot_variance_ratio(pca)
     
