@@ -19,9 +19,9 @@ from data.md_gender.md_gender import get_md_gender
 from data_preprocess import data_selection
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-R_COUNT = 160
+R_COUNT = 200
 CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
-BATCH_SIZE = 64
+BATCH_SIZE = 4
 
 def get_data_to_encode():
     # Load dataframes
