@@ -18,7 +18,7 @@ from data.md_gender.md_gender import get_md_gender
 from data_preprocess import data_selection
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-R_COUNT = 128
+R_COUNT = 160
 CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
 BATCH_SIZE = 64
 
@@ -30,8 +30,6 @@ def get_data_to_encode():
     df_pictures_males = df_pictures.loc[df_pictures['gender'] == 'male'].sample(R_COUNT)
     df_pictures_females = df_pictures.loc[df_pictures['gender'] == 'female'].sample(R_COUNT)
     
-    # a = df_text['male'].values and not df_text['female'].values
-    # print(a)
     df_text_males = df_text.loc[df_text['male'].values & ~ df_text['female'].values].sample(R_COUNT)
     df_text_females = df_text.loc[df_text['female'].values & ~ df_text['male'].values].sample(R_COUNT)
     
@@ -136,16 +134,17 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
     vgetlabel = np.vectorize(get_label)
     genders = vgetlabel(predictions)
     
-    df['predictes_gender'] = genders
+    df['predicted_gender'] = genders
     
     return df
 
 def get_gender_tensor(input, encoder, transform_matrix, debiased: bool = True):
-    H = encoder(input)
+    H = encoder(input).detach().numpy()
     if not debiased:
         return H
-    H = H.detach().numpy()
-    return H - np.dot(H, transform_matrix)
+    mult = np.dot(H, transform_matrix)
+    diff = H - mult
+    return diff
     
 if __name__ == '__main__':
     dfs_pics, dfs_text, df_test_pics = get_data_to_encode()
@@ -159,7 +158,7 @@ if __name__ == '__main__':
                                             ['A person of gender ' + label for label in labels],
                                             df_test_pics,
                                             transform_matrix)
-    print(df_test_pics.head(20))
+    print(df_test_pics.sample(20))
     
     
     
