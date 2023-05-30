@@ -45,7 +45,7 @@ def encode(pic_dataframes: List[pd.Dataframe], text_dataframes: List[pd.Datafram
         df['text_encoded'] = df.text_tensor.apply(lambda x: CLIP_MODEL.encode_text(x))
     return pic_dataframes, text_dataframes
 
-def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 165):
+def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 0.95):
     mean_male = R_male.sum() / R_COUNT
     mean_female = R_female.sum() / R_COUNT
     
@@ -54,10 +54,12 @@ def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float =
     
     R = pd.concat([R_male, R_female])
     
-    pca = PCA(n_components=0.95)  #n_componets= 0.95 means that the PCA will return the number of components that explain 95% of the variance
+    pca = PCA(k)  #n_componets= 0.95 means that the PCA will return the number of components that explain 95% of the variance
     R = R.apply(lambda x: x.detach().numpy()[0]).tolist()
-    R_std= StandardScaler().fit_transform(R)  #Standarizing data before applying PCA
+    R_std = StandardScaler().fit_transform(R)  #Standarizing data before applying PCA
     pca.fit(R_std)
+    
+    # print(pca.explained_variance_ratio_)
     
     # plot_variance_ratio(pca)
     
@@ -67,10 +69,10 @@ def plot_variance_ratio(pca):
     exp_var = pca.explained_variance_ratio_ * 100
     cum_exp_var = np.cumsum(exp_var)
 
-    plt.bar(range(1, 513), exp_var, align='center',
+    plt.bar(range(1, len(pca.components_) + 1), exp_var, align='center',
             label='Individual explained variance')
 
-    plt.step(range(1, 513), cum_exp_var, where='mid',
+    plt.step(range(1, len(pca.components_) + 1), cum_exp_var, where='mid',
             label='Cumulative explained variance', color='red')
 
     plt.ylabel('Explained variance percentage')
