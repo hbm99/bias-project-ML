@@ -24,9 +24,9 @@ CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
 BATCH_SIZE = 4
 # LOGIT_SCALE = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07)).exp()
 
-def get_data_to_encode():
+def get_data_to_encode(path):
     # Load dataframes
-    df_pictures, df_test_pictures = data_selection()
+    df_pictures, df_test_pictures = data_selection(path)
     df_text = get_md_gender('image_chat')
 
     df_pictures_males = df_pictures.loc[df_pictures['gender'] == 'male'].sample(R_COUNT)
@@ -46,9 +46,9 @@ def encode(pic_dataframes: List[pd.Dataframe], text_dataframes: List[pd.Datafram
         df['text_encoded'] = df.text_tensor.apply(lambda x: CLIP_MODEL.encode_text(x).float())
     return pic_dataframes, text_dataframes
 
-def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 500):
-    mean_male = R_male.sum() / R_COUNT
-    mean_female = R_female.sum() / R_COUNT
+def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 164):
+    mean_male = R_male.sum() / (R_COUNT * 2)
+    mean_female = R_female.sum() / (R_COUNT * 2)
     
     R_male = R_male.apply(lambda x: x - mean_male)
     R_female = R_female.apply(lambda x: x - mean_female)
@@ -155,12 +155,12 @@ def get_gender_tensor(input, encoder, transform_matrix, debiased: bool = True):
     if not debiased:
         return H
     mult = H @ torch.from_numpy(transform_matrix).float()
-    diff = H - mult
+    diff = H - (mult * 0.4)
     return diff
     
-def hard_debias():
-    dfs_pics, dfs_text, df_test_pics = get_data_to_encode()
-    dfs_pics, dfs_text  = encode(dfs_pics, dfs_text)
+def hard_debiasing(path: str):
+    dfs_pics, dfs_text, df_test_pics = get_data_to_encode(path)
+    dfs_pics, dfs_text = encode(dfs_pics, dfs_text)
     R_male = dfs_pics[0]['image_encoded'].append(dfs_text[0]['text_encoded'], ignore_index=True)
     R_female = dfs_pics[1]['image_encoded'].append(dfs_text[1]['text_encoded'], ignore_index=True)
     V = get_gender_subspace(R_male, R_female)
