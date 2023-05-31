@@ -6,8 +6,6 @@ from typing import List
 import torch
 from matplotlib import pyplot as plt
 from sklearn.decomposition import PCA
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
 
 sys.path.append('/Users/hanselblanco/Documents/4to/ML/project/bias-project-ML')
 import clip
@@ -22,7 +20,6 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 R_COUNT = 200
 CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
 BATCH_SIZE = 4
-# LOGIT_SCALE = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07)).exp()
 
 def get_data_to_encode(path):
     # Load dataframes
@@ -55,12 +52,9 @@ def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float =
     
     R = pd.concat([R_male, R_female])
     
-    pca = PCA(k)  #n_componets= 0.95 means that the PCA will return the number of components that explain 95% of the variance
+    pca = PCA(k)
     R = R.apply(lambda x: x.detach().numpy()[0]).tolist()
-    #R_std = StandardScaler().fit_transform(R)  #Standarizing data before applying PCA
-    pca.fit(R) # (_std)
-    
-    # print(pca.explained_variance_ratio_)
+    pca.fit(R)
     
     # plot_variance_ratio(pca)
     
@@ -132,12 +126,9 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
         
         image_features = image_features / image_features.norm(dim = -1, keepdim = True)
         
-        # cosine similarity as logits
-        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1)   # LOGIT_SCALE
+        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1)
         
-        # similarities = cosine_similarity(image_features, text_features)
-        
-        results.append(probs) # (similarities)
+        results.append(probs)
     
     flatten_results = torch.cat(results, axis=1)
     predictions = torch.argmax(flatten_results, axis=0)
@@ -151,7 +142,7 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
     return df
 
 def get_gender_tensor(input, encoder, transform_matrix, debiased: bool = True):
-    H = encoder(input).float() # detach().numpy()
+    H = encoder(input).float()
     if not debiased:
         return H
     mult = H @ torch.from_numpy(transform_matrix).float()
