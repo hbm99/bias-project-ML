@@ -9,7 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 
-sys.path.append('/Users/hanselblanco/Documents/4to/ML/project/bias-project-ML')
+sys.path.append('/Users/elenarodriguez/Documents/Escuela/4to/ML/Proyecto/bias-project-ML')
 import clip
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ from data.md_gender.md_gender import get_md_gender
 from data_preprocess import data_selection
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-R_COUNT = 160
+R_COUNT = 100
 CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
 BATCH_SIZE = 64
 
@@ -75,7 +75,7 @@ def plot_variance_ratio(pca):
 
     plt.ylabel('Explained variance percentage')
     plt.xlabel('Principal component index')
-    plt.xticks(ticks=[i for i in range(0, 512, 50)])
+    plt.xticks(ticks=[i for i in range(0, 512, 100)])
     plt.legend(loc='best')
     plt.tight_layout()
     
