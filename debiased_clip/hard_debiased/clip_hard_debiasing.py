@@ -9,7 +9,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 
-sys.path.append('/Users/elenarodriguez/Documents/Escuela/4to/ML/Proyecto/bias-project-ML')
+sys.path.append('/Users/hanselblanco/Documents/4to/ML/project/bias-project-ML')
 import clip
 import numpy as np
 import pandas as pd
@@ -19,13 +19,14 @@ from data.md_gender.md_gender import get_md_gender
 from data_preprocess import data_selection
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-R_COUNT = 100
+R_COUNT = 200
 CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
-BATCH_SIZE = 64
+BATCH_SIZE = 4
+# LOGIT_SCALE = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07)).exp()
 
-def get_data_to_encode():
+def get_data_to_encode(path):
     # Load dataframes
-    df_pictures, df_test_pictures = data_selection()
+    df_pictures, df_test_pictures = data_selection(path)
     df_text = get_md_gender('image_chat')
 
     df_pictures_males = df_pictures.loc[df_pictures['gender'] == 'male'].sample(R_COUNT)
@@ -38,26 +39,28 @@ def get_data_to_encode():
 
 def encode(pic_dataframes: List[pd.Dataframe], text_dataframes: List[pd.Dataframe]):
     for df in pic_dataframes:
-        df['image_tensor'] = df.filepath.apply(lambda x: torch.tensor(np.stack([CLIP_PREPROCESS(Image.open(x))])).to(DEVICE))
-        df['image_encoded'] = df.image_tensor.apply(lambda x: CLIP_MODEL.encode_image(x))
+        df['image_tensor'] = df.filepath.apply(lambda x: torch.tensor(np.stack([CLIP_PREPROCESS(Image.open(x))])).cpu())
+        df['image_encoded'] = df.image_tensor.apply(lambda x: CLIP_MODEL.encode_image(x).float())
     for df in text_dataframes:
-        df['text_tensor'] = df.caption.apply(lambda x: clip.tokenize(x).to(DEVICE))
-        df['text_encoded'] = df.text_tensor.apply(lambda x: CLIP_MODEL.encode_text(x))
+        df['text_tensor'] = df.caption.apply(lambda x: clip.tokenize(x).cpu())
+        df['text_encoded'] = df.text_tensor.apply(lambda x: CLIP_MODEL.encode_text(x).float())
     return pic_dataframes, text_dataframes
 
-def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 165):
-    mean_male = R_male.sum() / R_COUNT
-    mean_female = R_female.sum() / R_COUNT
+def get_gender_subspace(R_male: pd.Series, R_female: pd.Series, k: int | float = 164):
+    mean_male = R_male.sum() / (R_COUNT * 2)
+    mean_female = R_female.sum() / (R_COUNT * 2)
     
     R_male = R_male.apply(lambda x: x - mean_male)
     R_female = R_female.apply(lambda x: x - mean_female)
     
     R = pd.concat([R_male, R_female])
     
-    pca = PCA(n_components=0.95)  #n_componets= 0.95 means that the PCA will return the number of components that explain 95% of the variance
+    pca = PCA(k)  #n_componets= 0.95 means that the PCA will return the number of components that explain 95% of the variance
     R = R.apply(lambda x: x.detach().numpy()[0]).tolist()
-    R_std= StandardScaler().fit_transform(R)  #Standarizing data before applying PCA
-    pca.fit(R_std)
+    #R_std = StandardScaler().fit_transform(R)  #Standarizing data before applying PCA
+    pca.fit(R) # (_std)
+    
+    # print(pca.explained_variance_ratio_)
     
     # plot_variance_ratio(pca)
     
@@ -67,22 +70,22 @@ def plot_variance_ratio(pca):
     exp_var = pca.explained_variance_ratio_ * 100
     cum_exp_var = np.cumsum(exp_var)
 
-    plt.bar(range(1, 513), exp_var, align='center',
+    plt.bar(range(1, len(pca.components_) + 1), exp_var, align='center',
             label='Individual explained variance')
 
-    plt.step(range(1, 513), cum_exp_var, where='mid',
+    plt.step(range(1, len(pca.components_) + 1), cum_exp_var, where='mid',
             label='Cumulative explained variance', color='red')
 
     plt.ylabel('Explained variance percentage')
     plt.xlabel('Principal component index')
-    plt.xticks(ticks=[i for i in range(0, 512, 100)])
+    plt.xticks(ticks=[i for i in range(0, 512, 50)])
     plt.legend(loc='best')
     plt.tight_layout()
     
     plt.gcf().set_size_inches(64, 48)
     plt.savefig('variance_ratio.png', dpi=256)
 
-def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str]], df: pd.DataFrame) -> pd.DataFrame:
+""" def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str]], df: pd.DataFrame) -> pd.DataFrame:
     texts = [clip.tokenize(tkns[i]).to(DEVICE) for i in range(len(tkns))]
     photos = [Image.open(photo_path) for photo_path in df['filepath']]
     
@@ -108,14 +111,16 @@ def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str
         vect_get_label = np.vectorize(get_label)
         df['predicted_' + attributes[i]] = vect_get_label(predictions[i])
     
-    return df
+    return df """
 
 
 def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFrame, transform_matrix) -> pd.DataFrame:
-    texts = clip.tokenize(tkns).to(DEVICE)
+    texts = clip.tokenize(tkns).cpu()
     photos = [Image.open(photo_path) for photo_path in df['filepath']]
     
-    text_features = get_gender_tensor(texts, CLIP_MODEL.encode_text, transform_matrix, debiased = True)
+    with torch.no_grad():
+        text_features = get_gender_tensor(texts, CLIP_MODEL.encode_text, transform_matrix, debiased = True)
+    text_features = text_features / text_features.norm(dim = -1, keepdim = True)
     results = []
     pending_photos = len(photos)
     for i in range(0, len(photos), min(BATCH_SIZE, pending_photos)):
@@ -124,13 +129,18 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
         image_input = torch.tensor(np.stack(images)).to(DEVICE)
         with torch.no_grad():
             image_features = get_gender_tensor(image_input, CLIP_MODEL.encode_image, transform_matrix, debiased = True)
-            
-            similarities = cosine_similarity(image_features, text_features)
-            
-            results.append(similarities)
+        
+        image_features = image_features / image_features.norm(dim = -1, keepdim = True)
+        
+        # cosine similarity as logits
+        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1)   # LOGIT_SCALE
+        
+        # similarities = cosine_similarity(image_features, text_features)
+        
+        results.append(probs) # (similarities)
     
-    flatten_results = np.concatenate(results, axis=0)
-    predictions = np.argmax(flatten_results, axis=1)
+    flatten_results = torch.cat(results, axis=1)
+    predictions = torch.argmax(flatten_results, axis=0)
     
     get_label = lambda x:labels[x]
     vgetlabel = np.vectorize(get_label)
@@ -141,16 +151,16 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
     return df
 
 def get_gender_tensor(input, encoder, transform_matrix, debiased: bool = True):
-    H = encoder(input).detach().numpy()
+    H = encoder(input).float() # detach().numpy()
     if not debiased:
         return H
-    mult = np.dot(H, transform_matrix)
-    diff = H - mult
+    mult = H @ torch.from_numpy(transform_matrix).float()
+    diff = H - (mult * 0.4)
     return diff
     
-if __name__ == '__main__':
-    dfs_pics, dfs_text, df_test_pics = get_data_to_encode()
-    dfs_pics, dfs_text  = encode(dfs_pics, dfs_text)
+def hard_debiasing(path: str):
+    dfs_pics, dfs_text, df_test_pics = get_data_to_encode(path)
+    dfs_pics, dfs_text = encode(dfs_pics, dfs_text)
     R_male = dfs_pics[0]['image_encoded'].append(dfs_text[0]['text_encoded'], ignore_index=True)
     R_female = dfs_pics[1]['image_encoded'].append(dfs_text[1]['text_encoded'], ignore_index=True)
     V = get_gender_subspace(R_male, R_female)
@@ -160,7 +170,7 @@ if __name__ == '__main__':
                                             ['A person of gender ' + label for label in labels],
                                             df_test_pics,
                                             transform_matrix)
-    print(df_test_pics.sample(20))
+    return df_test_pics
     
     
     
