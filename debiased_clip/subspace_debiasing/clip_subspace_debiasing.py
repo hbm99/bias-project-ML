@@ -108,12 +108,12 @@ def plot_variance_ratio(pca):
     return df """
 
 
-def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFrame, transform_matrix) -> pd.DataFrame:
+def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFrame, transform_matrix, alpha: float) -> pd.DataFrame:
     texts = clip.tokenize(tkns).cpu()
     photos = [Image.open(photo_path) for photo_path in df['filepath']]
     
     with torch.no_grad():
-        text_features = get_gender_tensor(texts, CLIP_MODEL.encode_text, transform_matrix, debiased = True)
+        text_features = get_gender_tensor(texts, CLIP_MODEL.encode_text, transform_matrix,alpha, debiased = True)
     text_features = text_features / text_features.norm(dim = -1, keepdim = True)
     results = []
     pending_photos = len(photos)
@@ -122,13 +122,14 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
         images = [CLIP_PREPROCESS(photos[photo_idx]) for photo_idx in range(i, min(i + BATCH_SIZE, len(photos)))]
         image_input = torch.tensor(np.stack(images)).to(DEVICE)
         with torch.no_grad():
-            image_features = get_gender_tensor(image_input, CLIP_MODEL.encode_image, transform_matrix, debiased = True)
+            image_features = get_gender_tensor(image_input, CLIP_MODEL.encode_image, transform_matrix,alpha, debiased = True)
         
         image_features = image_features / image_features.norm(dim = -1, keepdim = True)
         
-        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1)
+        # cosine similarity as logits
+        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1) 
         
-        results.append(probs)
+        results.append(probs) 
     
     flatten_results = torch.cat(results, axis=1)
     predictions = torch.argmax(flatten_results, axis=0)
@@ -141,15 +142,15 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
     
     return df
 
-def get_gender_tensor(input, encoder, transform_matrix, debiased: bool = True):
-    H = encoder(input).float()
+def get_gender_tensor(input, encoder, transform_matrix, alpha: float, debiased: bool = True):
+    H = encoder(input).float() 
     if not debiased:
         return H
     mult = H @ torch.from_numpy(transform_matrix).float()
-    diff = H - (mult * 0.4)
+    diff = H - (mult * alpha)
     return diff
     
-def hard_debiasing(path: str):
+def subspace_debiasing(path: str, alpha: float = 0.4):
     dfs_pics, dfs_text, df_test_pics = get_data_to_encode(path)
     dfs_pics, dfs_text = encode(dfs_pics, dfs_text)
     R_male = dfs_pics[0]['image_encoded'].append(dfs_text[0]['text_encoded'], ignore_index=True)
@@ -160,13 +161,6 @@ def hard_debiasing(path: str):
     df_test_pics = run_clip_gender_debiased(labels, 
                                             ['A person of gender ' + label for label in labels],
                                             df_test_pics,
-                                            transform_matrix)
+                                            transform_matrix, alpha)
     return df_test_pics
-    
-    
-    
-    
-    
-    
-
 

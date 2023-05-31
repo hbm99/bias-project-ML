@@ -64,18 +64,3 @@ def full_model( width, height, num_races):
                   outputs=[age_output, race_output, gender_output],
                   name="utk_face_net")
     return model
-
-def build_model( width, height, num_races):
-    model= full_model(width, height, num_races)
-    opt = tf.optimizers.Adam(learning_rate=0.0001)
-    model.compile(optimizer=opt,
-                loss={
-                    'age_output': 'mse',
-                    'race_output': 'categorical_crossentropy',
-                    'gender_output': 'binary_crossentropy'},
-
-                metrics={
-                    'age_output': 'mae',
-                    'race_output': 'accuracy',
-                    'gender_output': 'accuracy'})
-    return model
