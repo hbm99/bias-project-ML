@@ -8,7 +8,7 @@ RACE_MAPPER = {0:'white', 1:'black',2: 'asian',3: 'indian', 4:'other'}
 GENDER_MAPPER = {0:'male',1:'female'}
 
 
-def data_selection(ds_path: str = 'data/utkface', k: int = 5):
+def data_selection(ds_path: str = 'data/utkface/', k: int = 5):
     
     df = load_dataset(ds_path)
     
@@ -29,12 +29,13 @@ def data_selection(ds_path: str = 'data/utkface', k: int = 5):
             test_idx=test_index
             break
 
-    train_data = df.iloc[train_idx]
-    test_data = df.iloc[test_idx]
+    train_data = df.iloc[train_idx].reset_index(drop=True)
+    test_data = df.iloc[test_idx].reset_index(drop=True)
 
     return train_data, test_data
 
-def load_dataset(ds_path: str = 'data/utkface'):
+
+def load_dataset(ds_path: str = 'data/utkface/'):
     # Loading filenames
     filenames = os.listdir(ds_path)
     
