@@ -127,11 +127,9 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
         image_features = image_features / image_features.norm(dim = -1, keepdim = True)
         
         # cosine similarity as logits
-        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1)   # LOGIT_SCALE
+        probs = (100.0 * text_features @ image_features.T).softmax(dim=-1) 
         
-        # similarities = cosine_similarity(image_features, text_features)
-        
-        results.append(probs) # (similarities)
+        results.append(probs) 
     
     flatten_results = torch.cat(results, axis=1)
     predictions = torch.argmax(flatten_results, axis=0)
@@ -145,7 +143,7 @@ def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFram
     return df
 
 def get_gender_tensor(input, encoder, transform_matrix, alpha: float, debiased: bool = True):
-    H = encoder(input).float() # detach().numpy()
+    H = encoder(input).float() 
     if not debiased:
         return H
     mult = H @ torch.from_numpy(transform_matrix).float()
@@ -163,13 +161,6 @@ def subspace_debiasing(path: str, alpha: float = 0.4):
     df_test_pics = run_clip_gender_debiased(labels, 
                                             ['A person of gender ' + label for label in labels],
                                             df_test_pics,
-                                            transform_matrix)
+                                            transform_matrix, alpha)
     return df_test_pics
-    
-    
-    
-    
-    
-    
-
 
