@@ -10,7 +10,7 @@ from PIL import Image
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 64
-CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/16", DEVICE)
+CLIP_MODEL, CLIP_PREPROCESS = clip.load("ViT-B/32", DEVICE)
 
 def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str]], df: pd.DataFrame, model = CLIP_MODEL) -> pd.DataFrame:
     texts = [clip.tokenize(tkns[i]).to(DEVICE) for i in range(len(tkns))]
