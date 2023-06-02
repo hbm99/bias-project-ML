@@ -27,9 +27,11 @@ def confusion_matrix(y_true, y_predict, labels, plot=True):
     if plot:
         disp = metrics.ConfusionMatrixDisplay(confusion_matrix=conf_matrix,
                                                 display_labels=labels)
-        disp.ax_.set_title('Normalized Confusion matrix')
+        # disp.ax_.set_title('Normalized Confusion matrix')
+        
         disp = disp.plot(cmap=plt.cm.Blues,values_format='g')
-        disp.plot()
+        disp.ax_.set_title('Normalized Confusion Matrix')
+
         plt.show()
 
     return conf_matrix
@@ -57,7 +59,12 @@ def compute_TP_FP_FN_TN(y_true, y_predict, labels):
 
 def selection_rate(y_true, y_predict, labels):
     rates= compute_TP_FP_FN_TN(y_true, y_predict, labels)
-    sr_per_class={lbl: rates[lbl][TP]/ y_true.value_counts()[lbl] for lbl in labels}
+
+    count_per_class={lbl:0 for lbl in labels}
+    for item in y_true:
+        count_per_class[item] += 1
+
+    sr_per_class={lbl: rates[lbl][TP]/ count_per_class[lbl] for lbl in labels}
 
     return sr_per_class
 
@@ -117,23 +124,24 @@ def disparate_impact(y_true, y_predict, labels):
 
     sr_values= selection_rate(y_true, y_predict, labels)
 
-    for i in range(len(labels)):
-        for j in range(i+1, len(labels)):
+    for pair in combinations(labels, 2):
+        
+        first_class = pair[0]
+        second_class = pair[1]
 
-            if sr_values[labels[i]] > sr_values[labels[j]]:
-                pg= labels[i]
-                ug= labels[j]
-            else: 
-                pg=labels[j]
-                ug=labels[i]
+        if sr_values[first_class] > sr_values[second_class]:
+                pg = first_class
+                ug = second_class
+        else: 
+            pg = second_class
+            ug = first_class
 
-            disp_impact = sr_values[ug] / sr_values[pg]
+        disp_impact = sr_values[ug] / sr_values[pg]
 
-            if disp_impact < DI_THRESHOLD:
-                disparate_impact=True
-                print('Disparate impact present in' + ug +  '/' +  pg + "\n"+
-                      'Value:'+ disp_impact )
-
+        if disp_impact < DI_THRESHOLD:
+            disparate_impact=True
+            print('Disparate impact present in  ' + ug +  '/' +  pg + "\n"+
+                    'Value:'+ str(disp_impact) )
 
     if not disparate_impact:
         print('No disparate impact present')
