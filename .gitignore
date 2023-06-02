@@ -7,7 +7,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .DS_Store
-*.json
+*.json - test_data_df.json
 # C extensions
 *.so
 
