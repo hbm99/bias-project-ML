@@ -79,35 +79,6 @@ def plot_variance_ratio(pca):
     plt.gcf().set_size_inches(64, 48)
     plt.savefig('variance_ratio.png', dpi=256)
 
-""" def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str]], df: pd.DataFrame) -> pd.DataFrame:
-    texts = [clip.tokenize(tkns[i]).to(DEVICE) for i in range(len(tkns))]
-    photos = [Image.open(photo_path) for photo_path in df['filepath']]
-    
-    results = [] * len(texts)
-    pending_photos = len(photos)
-    for i in range(0, len(photos), min(BATCH_SIZE, pending_photos)):
-        pending_photos = len(photos) - i
-        images = [CLIP_PREPROCESS(photos[photo_idx]) for photo_idx in range(i, min(i + BATCH_SIZE, len(photos)))]
-        image_input = torch.tensor(np.stack(images)).to(DEVICE)
-        with torch.no_grad():
-            logits_per_image_list = [CLIP_MODEL(image_input, text)[0] for text in texts]
-             
-            probs_list = [logits_per_image_list[j].softmax(dim=-1).cpu().numpy() for j in range(len(logits_per_image_list))]
-            
-            for j in range(len(probs_list)):
-                results[j].append(probs_list[j])
-                
-    concat_results = [np.concatenate(results[k], axis = 0) for k in range(len(results))]
-    predictions = [np.argmax(concat_results[k], axis = 1) for k in range(len(concat_results))]
-    
-    for i in range(len(labels)):
-        get_label = lambda x: labels[i][x]
-        vect_get_label = np.vectorize(get_label)
-        df['predicted_' + attributes[i]] = vect_get_label(predictions[i])
-    
-    return df """
-
-
 def run_clip_gender_debiased(labels: List[str], tkns: List[str], df: pd.DataFrame, transform_matrix, alpha: float) -> pd.DataFrame:
     texts = clip.tokenize(tkns).cpu()
     photos = [Image.open(photo_path) for photo_path in df['filepath']]
