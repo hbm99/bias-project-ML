@@ -16,7 +16,7 @@ def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str
     texts = [clip.tokenize(tkns[i]).to(DEVICE) for i in range(len(tkns))]
     photos = [Image.open(photo_path) for photo_path in df['filepath']]
     
-    results = [] * len(texts)
+    results = {attribute : [] for attribute in attributes}
     pending_photos = len(photos)
     for i in range(0, len(photos), min(BATCH_SIZE, pending_photos)):
         pending_photos = len(photos) - i
@@ -24,14 +24,14 @@ def run_clip(attributes: List[str], labels: List[List[str]], tkns: List[List[str
         image_input = torch.tensor(np.stack(images)).to(DEVICE)
         with torch.no_grad():
             logits_per_image_list = [model(image_input, text)[0] for text in texts]
-             
+            
             probs_list = [logits_per_image_list[j].softmax(dim=-1).cpu().numpy() for j in range(len(logits_per_image_list))]
             
-            for j in range(len(probs_list)):
-                results[j].append(probs_list[j])
+            for k in range(len(attributes)):
+                for j in range(len(probs_list[k])):
+                    results[attributes[k]].append(probs_list[k][j])
                 
-    concat_results = [np.concatenate(results[k], axis = 0) for k in range(len(results))]
-    predictions = [np.argmax(concat_results[k], axis = 1) for k in range(len(concat_results))]
+    predictions = [np.argmax(results[attribute], axis = 1) for attribute in attributes]
     
     for i in range(len(labels)):
         get_label = lambda x: labels[i][x]
