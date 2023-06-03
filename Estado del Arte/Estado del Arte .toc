@@ -1,0 +1,14 @@
+\select@language {spanish}
+\contentsline {title}{Proyecto de \unskip \ \ignorespaces Aprendizaje de M\'aquinas}{1}{chapter.1}
+\authcount {1}
+\contentsline {author}{ Daniela Rodr\'iguez Cepero\unskip \ \ignorespaces Elena Rodr\'iguez Horta\unskip \ \ignorespaces Hasel Mart\'i Blanco\unskip \ \ignorespaces Karel Camilo Manresa Le\'on\unskip \ \ignorespaces Karlos Alejandro Alfonso Rodr\'iguez\unskip \ \ignorespaces L\'azaro Alejandro Castro }{1}{chapter.1}
+\contentsline {section}{\numberline {1}Introducci\'on}{3}{section.1.1}
+\contentsline {section}{\numberline {2}Sesgo}{5}{section.1.2}
+\contentsline {subsection}{\numberline {2.1}Tipos de Sesgos}{6}{subsection.1.2.1}
+\contentsline {subsection}{\numberline {2.2}M\'etricas y equidad}{7}{subsection.1.2.2}
+\contentsline {section}{\numberline {3}DataSet}{10}{section.1.3}
+\contentsline {section}{\numberline {4}Algoritmo}{11}{section.1.4}
+\contentsline {subsection}{\numberline {4.1}T\'ecnicas Algor\'itmicas}{11}{subsection.1.4.1}
+\contentsline {section}{\numberline {5}Modelo}{13}{section.1.5}
+\contentsline {section}{\numberline {6}Modelo Clip de OpenAI}{14}{section.1.6}
+\contentsline {section}{Referencias}{15}{section.1.6}
