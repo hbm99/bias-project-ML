@@ -104,7 +104,7 @@ def equalized_odds(y_true, y_predict, labels):
 
         if tpr_eo_value >= EO_THRESHOLD:
             equalized_odds = False
-            print(tpr_eo_value +': Not equalized odds between ' + first_class + ' and ' + second_class + 
+            print(str(tpr_eo_value) +': Not equalized odds between ' + first_class + ' and ' + second_class + 
                   ' (tpr). Privileged group: ' + max(tpr_values.items(), key=operator.itemgetter(1))[0])
             
         
@@ -114,7 +114,7 @@ def equalized_odds(y_true, y_predict, labels):
 
         if fpr_eo_value >= EO_THRESHOLD:
             equalized_odds = False
-            print(fpr_eo_value +': Not equalized odds between ' + first_class + ' and ' + second_class + 
+            print(str(fpr_eo_value) +': Not equalized odds between ' + first_class + ' and ' + second_class + 
                   ' (fpr). Privileged group: ' + min(fpr_values.items(), key=operator.itemgetter(1))[0])
 
     if equalized_odds:
