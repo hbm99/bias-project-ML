@@ -89,6 +89,8 @@ def equalized_odds(y_true, y_predict, labels):
 
     equalized_odds = True
 
+    eq_odds_values = {pair[0]+'--' + pair[1]: {'tpr':0, 'fpr':0} for pair in combinations(labels,2)}
+
     for pair in combinations(labels, 2):
         
         first_class = pair[0]
@@ -98,6 +100,8 @@ def equalized_odds(y_true, y_predict, labels):
 
         tpr_eo_value= abs(tpr_values[first_class] - tpr_values[second_class])
 
+        eq_odds_values[first_class + '--'+ second_class]['tpr'] = tpr_eo_value 
+
         if tpr_eo_value >= EO_THRESHOLD:
             equalized_odds = False
             print(str(tpr_eo_value) +': Not equalized odds between ' + first_class + ' and ' + second_class + 
@@ -105,14 +109,20 @@ def equalized_odds(y_true, y_predict, labels):
             
         
         fpr_eo_value= abs(fpr_values[first_class] - fpr_values[second_class])
+
+        eq_odds_values[first_class + '--'+ second_class]['fpr'] = fpr_eo_value
+
         if fpr_eo_value >= EO_THRESHOLD:
             equalized_odds = False
             print(str(fpr_eo_value) +': Not equalized odds between ' + first_class + ' and ' + second_class + 
                   ' (fpr). Privileged group: ' + min(fpr_values.items(), key=operator.itemgetter(1))[0])
 
     if equalized_odds:
-        print('Equalized odds') 
+        print('Equalized odds')
+        print('RESULTS: ', eq_odds_values)
         return True
+    
+    print('RESULTS: ', eq_odds_values)
     return False
 
 
@@ -123,6 +133,8 @@ def disparate_impact(y_true, y_predict, labels):
     disparate_impact=False
 
     sr_values= selection_rate(y_true, y_predict, labels)
+
+    disp_impact_values = {}
 
     for pair in combinations(labels, 2):
         
@@ -136,7 +148,11 @@ def disparate_impact(y_true, y_predict, labels):
             pg = second_class
             ug = first_class
 
+        
+
         disp_impact = sr_values[ug] / sr_values[pg]
+
+        disp_impact_values[ug +  '/' +  pg]=  disp_impact
 
         if disp_impact < DI_THRESHOLD:
             disparate_impact=True
@@ -145,5 +161,7 @@ def disparate_impact(y_true, y_predict, labels):
 
     if not disparate_impact:
         print('No disparate impact present')
+        print('RESULTS: ',disp_impact_values)
         return False
+    print('RESULTS: ',disp_impact_values)
     return True
